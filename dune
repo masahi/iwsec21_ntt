@@ -1,0 +1,8 @@
+(executables
+ (names tagless_ntt_c)
+ (libraries
+   base
+   ctypes.foreign
+   integers
+  )
+)

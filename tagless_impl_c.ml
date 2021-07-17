@@ -275,37 +275,3 @@ module SIMD_Mem(Instr: Mem_instruction) = struct
     let vec_ty_str = ty_to_ty_str vec_ty in
     (CVoid, with_indent (sprintf "%s((%s*)(%s + %s), %s);\n" Instr.vstore vec_ty_str src index v))
 end
-
-module AVX2_UInt16(Scalar_domain: Domain) = struct
-  include C_codegen
-  type four = z s s s s
-  type t = Scalar_domain.t
-
-  let vec_len = 16
-
-  module Vec16U16 = struct
-    type t = Scalar_domain.t
-    type n = four
-  end
-
-  module Mem = struct
-    include Vec16U16
-    let vec_len_exponent = S (S (S (S Z)))
-
-    let vload = "_mm256_loadu_si256"
-    let vstore = "_mm256_storeu_si256"
-  end
-
-  include SIMD_Mem(Mem)
-
-  module Arith = struct
-    include Vec16U16
-
-    let vadd = "_mm256_add_epi16"
-    let vsub = "_mm256_sub_epi16"
-
-    let vmullo = "_mm256_mullo_epi16"
-  end
-
-  module Vector_domain = Integer_SIMD(Arith)
-end

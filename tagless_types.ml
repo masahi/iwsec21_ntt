@@ -254,8 +254,3 @@ module type Vector_lang_with_shuffle_with_barret = sig
   type 'a vec = 'a Vector_domain.vec
   val barret_reduce: t vec expr -> t vec expr
 end
-
-module type Domain_with_barret = sig
-  include Domain
-  val barret_reduce: t expr -> t expr
-end

@@ -78,9 +78,9 @@ int main() {
     }
   }
 
-  for (int i = 0; i < N_samples; ++i) {
-    printf("%f\n", cycles[i]);
-  }
+  /* for (int i = 0; i < N_samples; ++i) { */
+  /*   printf("%f\n", cycles[i]); */
+  /* } */
   printf("median of 100 runs: %f\n", median(cycles, N_samples));
 
   return 0;

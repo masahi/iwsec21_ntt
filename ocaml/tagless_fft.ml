@@ -1,10 +1,11 @@
 open Tagless_types
 open Tagless_vectorize
 
+let log2 = Base.Int.floor_log2
 
 module Primitive_roots(D: Domain) = struct
   let powers_memory_efficient n =
-    let num_stage = Base.Int.floor_log2 n in
+    let num_stage = log2 n in
     let powers = Array.make n D.one in
     let index = ref 0 in
     for s = 1 to num_stage do
@@ -18,7 +19,7 @@ module Primitive_roots(D: Domain) = struct
     powers
 
   let powers_for_vectorized n vec_len =
-    let num_stage = Base.Int.floor_log2 n in
+    let num_stage = log2 n in
     let size = ref 0 in
     for s = 1 to num_stage do
       let m = Int.shift_left 1 s in
@@ -78,11 +79,18 @@ module UIntegerModulo(Base_lang: C_lang_aux)(Param: Ntt_param) = struct
   type t = Base_lang.uint16
   let domain_c_type = CUInt16
 
-  let q = Param.q
-  let qinv = Param.qinv
+  let lift = Base_lang.UInt16.lift
 
+  let one = Unsigned.UInt16.of_int 1
   let rlog = 16
   let r = (Int.shift_left 1 rlog)
+
+  let primitive_root_power _ j =
+    let module Prim_roots = Primitive_roots_int(Param)(struct let factor = r end) in
+    Unsigned.UInt16.of_int (Prim_roots.primitive_root_power Param.n j)
+
+  let q = Param.q
+  let qinv = Param.qinv
 
   let csub = func "csub" CUInt16 (fun (a: UInt16.t expr) ->
       let open Int16 in
@@ -112,8 +120,6 @@ module UIntegerModulo(Base_lang: C_lang_aux)(Param: Ntt_param) = struct
                       let_ (a %>> rlog) (fun t ->
                           return_ (app csub (to_uint16 t))))))))
 
-  let lift = Base_lang.UInt16.lift
-
   let add x y =
     let open UInt16 in
     app barret_reduce (x %+ y)
@@ -126,24 +132,6 @@ module UIntegerModulo(Base_lang: C_lang_aux)(Param: Ntt_param) = struct
   let mul x y =
     let open UInt32 in
     app montgomery_reduce ((UInt16.to_uint32 x) %* (UInt16.to_uint32 y))
-
-  let one = Unsigned.UInt16.of_int 1
-
-  let primitive_root_power _ j =
-    let module Prim_roots = Primitive_roots_int(Param)(struct let factor = r end) in
-    Unsigned.UInt16.of_int (Prim_roots.primitive_root_power Param.n j)
-
-end
-
-module UIntegerModulo_lazy(Base_lang: C_lang_aux)(Param: Ntt_param) = struct
-  include UIntegerModulo(Base_lang)(Param)
-
-  let add x y =
-    let open UInt16 in
-    (x %+ y)
-
-  let barret_reduce x = app barret_reduce x
-
 end
 
 module Bit_rev(S: Array_lang) = struct
@@ -168,7 +156,6 @@ module Bit_rev(S: Array_lang) = struct
   let get_bit_reverse n in_ty =
     assert (n == 1024);
     fun () ->  bit_reverse Bit_reverse.Bit_rev_1024.bit_reverse_table in_ty
-
 end
 
 
@@ -182,7 +169,7 @@ module FFT_gen(Lang: Array_lang)(D: Domain with type 'a expr = 'a Lang.expr) = s
     let prim_root_powers = Prim_roots.powers_memory_efficient n in
     let prim_root_powers = arr_init n (fun i -> D.lift (prim_root_powers.(i))) in
     let input_ty = CArr (D.domain_c_type) in
-    let num_stage = int_ (Base.Int.floor_log2 n) in
+    let num_stage = int_ (log2 n) in
     let bit_reverse = B_rev.get_bit_reverse n input_ty () in
     let n = int_ n in
     func "fft" input_ty (fun input ->
@@ -207,10 +194,10 @@ module FFT_gen(Lang: Array_lang)(D: Domain with type 'a expr = 'a Lang.expr) = s
                                    (arr_set input (index %+ m_half) (D.sub u t)))))))))
 end
 
-module FFT_vectorized_with_shuffle_gen
+module FFT_vectorized_gen
     (Lang: Array_lang)
     (D: Domain with type 'a expr = 'a Lang.expr)
-    (V_lang: Vector_lang_with_shuffle_with_barret
+    (V_lang: Vector_lang
      with type 'a expr = 'a Lang.expr
      with type 'a stmt = 'a Lang.stmt
      with type Vector_domain.t = D.t) =
@@ -233,7 +220,7 @@ struct
                  (arr_set input (index %+ m_half) (D.sub u t))))
   end
 
-  module Lazy_reduction(V: Vector_lang_with_shuffle_with_barret)(Stage: sig val s: int end) : Vector_lang_with_shuffle
+  module Lazy_reduction(V: Vector_lang)(Stage: sig val s: int end) : Vector_lang
     with type 'a expr = 'a V.expr
     with type 'a stmt = 'a V.stmt
     with type Vector_domain.t = V.Vector_domain.t =
@@ -286,7 +273,7 @@ struct
                          (vstore input k v0_res)
                          (vstore input (k %+ (int_ vec_len)) v1_res)))))))))))
     in
-    let num_stage = Base.Int.floor_log2 n in
+    let num_stage = log2 n in
     let bit_reverse = B_rev.get_bit_reverse n input_ty () in
     let fft_funcs = Array.init num_stage (fun s -> fft_stage (s + 1)) in
     func "fft" input_ty (fun input ->

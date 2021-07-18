@@ -143,10 +143,6 @@ module Sugar(L: C_lang) = struct
   let call2 f arg1 arg2 =
     ignore_ (app2 f arg1 arg2)
 
-  let seq3 s1 s2 s3 = seq s1 (seq s2 s3)
-
-  let seq4 s1 s2 s3 s4 = seq s1 (seq3 s2 s3 s4)
-
   let let2 rhs1 rhs2 body =
     let_ rhs1 (fun v1 ->
         let_ rhs2 (fun v2 ->
@@ -160,7 +156,6 @@ module Sugar(L: C_lang) = struct
       seq
         (body i)
         (unroll (i + 1) unroll_end body)
-
 end
 
 module type Array_lang = sig
@@ -172,52 +167,18 @@ module type Array_lang = sig
   val arr_set: 'a arr expr -> int expr -> 'a expr -> unit stmt
 end
 
-module type Complex_lang = sig
-  include C_lang
-  val complex_ : Complex.t -> Complex.t expr   (* constant *)
-  val cadd : Complex.t expr -> Complex.t expr -> Complex.t expr
-  val csub : Complex.t expr -> Complex.t expr -> Complex.t expr
-  val cmul : Complex.t expr -> Complex.t expr -> Complex.t expr
-end
-
-module type Int_modulo_lang = sig
-  (* to access prim_roots table, array interface is needed *)
-  include C_lang
-  val mod_ : int expr -> int -> int expr
-end
-
-module type Int_lang_for_reduction = sig
-  (* to access prim_roots table, array interface is needed *)
-  include C_lang
-  val mulhi: int expr -> int expr -> int expr
-  val mullo: int expr -> int expr -> int expr
-
-  val not_zero: int expr -> int expr
-end
-
-module type C_lang_aux_for_reduction = sig
-  (* to access prim_roots table, array interface is needed *)
-  include C_lang_aux
-  val mulhi: int expr -> int expr -> int expr
-  val mullo: int expr -> int expr -> int expr
-
-  val not_zero: int expr -> int expr
-end
-
 module type Domain = sig
   type 'a expr
   type t
 
   val domain_c_type: t c_type
+  val one: t
+  val primitive_root_power: int -> int -> t
 
   val lift: t -> t expr
   val add: t expr -> t expr -> t expr
   val sub: t expr -> t expr -> t expr
   val mul: t expr -> t expr -> t expr
-
-  val one: t
-
-  val primitive_root_power: int -> int -> t
 end
 
 module type Vectorized_domain = sig
@@ -235,22 +196,14 @@ module type Vector_lang = sig
   module Vector_domain: Vectorized_domain with type 'a expr = 'a expr
 
   type 'a vec = 'a Vector_domain.vec
+  type t = Vector_domain.t
   val vec_len: int
   (* val broadcast : 'a expr -> 'a vec expr *)
   val vload: 'a arr expr -> int expr -> 'a vec expr
   val vstore: 'a arr expr -> int expr -> 'a vec expr -> unit stmt
-end
 
-module type Vector_lang_with_shuffle = sig
-  include Vector_lang
-  type t = Vector_domain.t
-  type 'a vec = 'a Vector_domain.vec
   val shuffle: int -> t vec expr -> t vec expr -> (t vec expr * t vec expr)
-end
 
-module type Vector_lang_with_shuffle_with_barret = sig
-  include Vector_lang_with_shuffle
-  type t = Vector_domain.t
-  type 'a vec = 'a Vector_domain.vec
+  (* for lazy reduction *)
   val barret_reduce: t vec expr -> t vec expr
 end

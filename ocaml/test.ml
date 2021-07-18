@@ -39,11 +39,21 @@ let get_ntt_uint16_scalar (module Param: Ntt_param) =
   get_wrapper out_so fn_name (ptr uint16_t) void
 
 
-let get_ntt_uint16_vectorized (module Param: Ntt_param) =
-  let module C_Int_mod = UIntegerModulo_lazy(C_codegen)(Param) in
-  let module SIMD = Vector_newhope.AVX2_UInt16_int_modulo_with_shuffle(C_Int_mod)(Param) in
-  (* let module SIMD = Vector_newhope.AVX512_UInt16_int_modulo_with_shuffle(C_Int_mod)(Param) in *)
-  let module C_NTT = FFT_vectorized_with_shuffle_gen(C_codegen)(C_Int_mod)(SIMD) in
+let get_ntt_uint16_avx2 (module Param: Ntt_param) =
+  let module C_Int_mod = UIntegerModulo(C_codegen)(Param) in
+  let module SIMD = Vector_newhope.AVX2_UInt16(Param) in
+  let module C_NTT = FFT_vectorized_gen(C_codegen)(C_Int_mod)(SIMD) in
+  let (_, _, fn_name) = C_NTT.fft Param.n in
+  let decls = C_codegen.get_declaration () in
+  let out_so = "generated_u16.so" in
+  compile_c decls out_so;
+  get_wrapper out_so fn_name (ptr uint16_t) void
+
+
+let get_ntt_uint16_avx512 (module Param: Ntt_param) =
+  let module C_Int_mod = UIntegerModulo(C_codegen)(Param) in
+  let module SIMD = Vector_newhope.AVX512_UInt16(Param) in
+  let module C_NTT = FFT_vectorized_gen(C_codegen)(C_Int_mod)(SIMD) in
   let (_, _, fn_name) = C_NTT.fft Param.n in
   let decls = C_codegen.get_declaration () in
   let out_so = "generated_u16.so" in
@@ -56,7 +66,7 @@ let test_ntt_uint16 =
   let qinv = 12287 in
   let omega = get_prim_root size q in
   let module Param = struct let q = q let qinv = qinv let omega = omega let n = size end in
-  let ntt = get_ntt_uint16_scalar (module Param) in
+  let ntt = get_ntt_uint16_avx2 (module Param) in
   let open Dft.DFT(Param) in
   let arr = Array.init size (fun _ -> Random.int Param.q) in
   let ref_res = dft arr in

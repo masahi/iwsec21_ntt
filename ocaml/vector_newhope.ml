@@ -257,7 +257,7 @@ module AVX2_v16_length_spec = struct
   let vec_len_exponent = S (S (S (S Z)))
 end
 
-module AVX2_UInt16_int_modulo_with_shuffle(Scalar_domain: Domain)(Param: Tagless_fft.Ntt_param) = struct
+module AVX2_UInt16(Param: Tagless_fft.Ntt_param) = struct
   open Shuffle
   module SIMD_v16_u16 = Make_SIMD_Instr_with_shuffle(U16)(AVX2_v16_Instr_with_shuffle)(AVX2_v16_length_spec)
   module Vector_domain = Integer_modulo_SIMD_with_shuffle(C_codegen)(SIMD_v16_u16)(Param)
@@ -265,12 +265,12 @@ module AVX2_UInt16_int_modulo_with_shuffle(Scalar_domain: Domain)(Param: Tagless
 
   include C_codegen
 
-  type t = Scalar_domain.t
+  type t = Unsigned.UInt16.t
 
   let vec_len = 16
 
   module Mem = struct
-    type t = Scalar_domain.t
+    type t = Unsigned.UInt16.t
     type n = SIMD_v16_u16.n
 
     let vec_len_exponent = SIMD_v16_u16.vec_len_exponent
@@ -351,18 +351,18 @@ module AVX512_v32_Instr_with_shuffle : Shuffle.SIMD_str_with_shuffle = struct
     | _ -> assert false
 end
 
-module AVX512_UInt16_int_modulo_with_shuffle(Scalar_domain: Domain)(Param: Tagless_fft.Ntt_param) = struct
+module AVX512_UInt16(Param: Tagless_fft.Ntt_param) = struct
   open Shuffle
   module SIMD_v32_u16 = Make_SIMD_Instr_with_shuffle(U16)(AVX512_v32_Instr_with_shuffle)(AVX512_v32_length_spec)
   module Vector_domain = Integer_modulo_SIMD_with_shuffle(C_codegen)(SIMD_v32_u16)(Param)
   type 'a vec = 'a Vector_domain.vec
 
   include C_codegen
-  type t = Scalar_domain.t
+  type t = Unsigned.UInt16.t
   let vec_len = 32
 
   module Mem = struct
-    type t = Scalar_domain.t
+    type t = Unsigned.UInt16.t
     type n = SIMD_v32_u16.n
     let vec_len_exponent = SIMD_v32_u16.vec_len_exponent
     let vload = "_mm512_loadu_si512"

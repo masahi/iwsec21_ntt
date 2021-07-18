@@ -28,10 +28,6 @@ module C_codegen = struct
   let (%<<) (_, a) (_, b) = (CInt, sprintf "(%s << %s)" a b)
   let (%>>) (_, a) (_, b) = (CInt, sprintf "(%s >> %s)" a b)
 
-  (* let mullo (_, x) (_, y) = (CUInt16, sprintf "(((uint32_t)%s * (uint32_t)%s) %c (1 << 16))" x y '%')
-   * let mulhi (_, x) (_, y) = (CUInt16, sprintf "(((uint32_t)%s * (uint32_t)%s) %c (1 << 16))" x y '/')
-   * let non_zero (_, x) = (CUInt16, sprintf "%s > 0" x) *)
-
   let default_headers = ["stdint.h"; "immintrin.h"]
 
   let init_decls () =

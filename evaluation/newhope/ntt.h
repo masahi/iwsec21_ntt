@@ -12,5 +12,3 @@ void ntt(int32_t *coeffs);
 
 void bitrev_vector_ref(uint16_t* poly);
 void ntt_ref(uint16_t *poly);
-
-void fft(uint16_t* poly);
